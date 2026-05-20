@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import { getWorkLogs, getProjects } from '@/lib/queries/logs'
+import { getWorkLogInsight } from '@/lib/queries/insights'
+import { getAllProfiles } from '@/lib/queries/settings'
 import { LogDialog } from '@/components/logs/LogDialog'
 import { LogCarousel } from '@/components/logs/LogCarousel'
 import { LogFilters } from '@/components/logs/LogFilters'
+import { AIInsights } from '@/components/logs/AIInsights'
 import { ClipboardX, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
 import type { WorkLog, Project } from '@/lib/types'
@@ -31,9 +34,9 @@ function getMonthRange(monthStr: string) {
 export default async function LogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; projectId?: string }>
+  searchParams: Promise<{ month?: string; projectId?: string; userId?: string }>
 }) {
-  const { month, projectId } = await searchParams
+  const { month, projectId, userId } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -49,6 +52,14 @@ export default async function LogsPage({
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
+  // If manager/admin, fetch profiles for user selection
+  const profiles = isManagerOrAdmin ? await getAllProfiles() : []
+
+  // Determine target user ID to query logs & insights
+  const selectedUserId = isManagerOrAdmin
+    ? (userId === 'all' || !userId ? undefined : userId)
+    : user.id
+
   const now = new Date()
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const currentMonth = month ?? defaultMonth
@@ -56,13 +67,18 @@ export default async function LogsPage({
 
   const [logs, projects] = await Promise.all([
     getWorkLogs({
-      userId: isManagerOrAdmin ? undefined : user.id,
+      userId: selectedUserId,
       startDate,
       endDate,
       projectId: projectId === 'all' ? undefined : projectId,
     }),
     getProjects(),
   ])
+
+  // Get cached insights if a single user is selected
+  const cachedInsight = selectedUserId
+    ? await getWorkLogInsight(selectedUserId, currentMonth)
+    : null
 
   const grouped = groupLogsByDate(logs)
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a))
@@ -80,31 +96,45 @@ export default async function LogsPage({
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <LogFilters projects={projects as Project[]} />
+          <LogFilters
+            projects={projects as Project[]}
+            profiles={profiles}
+            isManagerOrAdmin={isManagerOrAdmin}
+          />
           <LogDialog projects={projects as Project[]} />
         </div>
       </div>
 
       {/* AI Productivity Insights */}
-      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-primary/5 via-accent/30 to-background border border-border/50 p-6 md:p-8 shadow-sm">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-accent/40 blur-2xl rounded-full pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
-          <div className="shrink-0 p-3 rounded-2xl bg-background border border-border text-primary shadow-sm">
-            <Sparkles className="w-6 h-6" />
-          </div>
+      {selectedUserId ? (
+        <AIInsights
+          key={`${selectedUserId}-${currentMonth}`}
+          initialInsights={cachedInsight}
+          month={currentMonth}
+          targetUserId={selectedUserId}
+          isManagerOrAdmin={isManagerOrAdmin}
+          hasLogs={logs.length > 0}
+        />
+      ) : (
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-primary/5 via-accent/30 to-background border border-border/50 p-6 md:p-8 shadow-sm">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-accent/40 blur-2xl rounded-full pointer-events-none" />
           
-          <div className="flex-1 space-y-2">
-            <h2 className="text-xl font-bold text-foreground">
-              AI Productivity Insights
-            </h2>
-            <p className="text-[14px] md:text-[15px] text-foreground/80 leading-relaxed font-medium">
-              During this month, the employee demonstrated strong performance as a Full Stack Developer, completing 24 assigned tasks with an on-time delivery rate of 96%. The primary focus was the web application enhancement project, contributing over 120 development hours across frontend and backend modules. A key achievement was the successful implementation of the user management module, reducing API response time by 35%. The employee also completed Docker learning and applied containerization in development workflows, improving deployment efficiency by 25%. Collaboration, code quality, and responsiveness remained consistently strong throughout the month.
-            </p>
+          <div className="relative z-10 flex gap-4 items-center">
+            <div className="shrink-0 p-3 rounded-2xl bg-background border border-border text-primary shadow-sm">
+              <Sparkles className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                AI Performance Insights
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Select a specific employee from the filter dropdown above to view or generate AI performance insights.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Hero Carousel Section */}
       {sortedDates.length > 0 ? (

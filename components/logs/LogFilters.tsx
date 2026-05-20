@@ -8,20 +8,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Project } from '@/lib/types'
-import { Calendar, Filter, FolderDot } from 'lucide-react'
+import type { Project, Profile } from '@/lib/types'
+import { Calendar, Filter, FolderDot, User } from 'lucide-react'
 import { useCallback } from 'react'
 
 interface LogFiltersProps {
   projects: Project[]
+  profiles?: Profile[]
+  isManagerOrAdmin?: boolean
 }
 
-export function LogFilters({ projects }: LogFiltersProps) {
+export function LogFilters({ projects, profiles = [], isManagerOrAdmin = false }: LogFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const currentProject = searchParams.get('projectId') ?? 'all'
+  const currentEmployee = searchParams.get('userId') ?? 'all'
   const now = new Date()
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const currentMonth = searchParams.get('month') ?? defaultMonth
@@ -45,6 +48,10 @@ export function LogFilters({ projects }: LogFiltersProps) {
 
   const handleMonthChange = (value: string) => {
     router.push(pathname + '?' + createQueryString('month', value))
+  }
+
+  const handleEmployeeChange = (value: string) => {
+    router.push(pathname + '?' + createQueryString('userId', value))
   }
 
   // Generate last 3 months (Current, Prev, Prev-Prev) using local time to avoid UTC shifts
@@ -82,6 +89,26 @@ export function LogFilters({ projects }: LogFiltersProps) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Employee Selector (Manager/Admin only) */}
+      {isManagerOrAdmin && profiles.length > 0 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border/60 shadow-sm">
+          <User className="w-4 h-4 text-primary" />
+          <Select value={currentEmployee} onValueChange={handleEmployeeChange}>
+            <SelectTrigger className="border-none bg-transparent h-7 p-0 focus:ring-0 w-[150px] font-semibold text-xs uppercase tracking-wider cursor-pointer">
+              <SelectValue placeholder="All Employees" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl shadow-2xl border-border/40">
+              <SelectItem value="all" className="text-xs font-bold uppercase tracking-wide italic">All Employees</SelectItem>
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="text-xs font-bold uppercase tracking-wide">
+                  {p.full_name || 'Unnamed Employee'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Project Selector */}
       <div className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border/60 shadow-sm">
