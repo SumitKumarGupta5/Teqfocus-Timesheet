@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { getProfile, getWeeklyHours } from '@/lib/queries/settings'
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 
 export const metadata: Metadata = {
   title: {
@@ -33,9 +34,13 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Topbar profile={profile} weeklyHours={weeklyHours} />
+      <Suspense fallback={<div className="h-16 border-b border-border bg-card shrink-0" />}>
+        <Topbar profile={profile} weeklyHours={weeklyHours} />
+      </Suspense>
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar profile={profile} weeklyHours={weeklyHours} />
+        <Suspense fallback={<div className="hidden lg:block w-60 shrink-0 h-full border-r border-border bg-card" />}>
+          <Sidebar profile={profile} weeklyHours={weeklyHours} />
+        </Suspense>
         <main className="flex-1 overflow-y-auto bg-background">
           {children}
         </main>

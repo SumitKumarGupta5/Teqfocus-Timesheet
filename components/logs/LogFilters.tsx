@@ -16,15 +16,16 @@ interface LogFiltersProps {
   projects: Project[]
   profiles?: Profile[]
   isManagerOrAdmin?: boolean
+  currentUserId?: string
 }
 
-export function LogFilters({ projects, profiles = [], isManagerOrAdmin = false }: LogFiltersProps) {
+export function LogFilters({ projects, profiles = [], isManagerOrAdmin = false, currentUserId }: LogFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const currentProject = searchParams.get('projectId') ?? 'all'
-  const currentEmployee = searchParams.get('userId') ?? 'all'
+  const currentEmployee = searchParams.get('userId') || (isManagerOrAdmin ? (currentUserId ?? 'all') : 'all')
   const now = new Date()
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const currentMonth = searchParams.get('month') ?? defaultMonth
@@ -32,7 +33,9 @@ export function LogFilters({ projects, profiles = [], isManagerOrAdmin = false }
   const createQueryString = useCallback(
     (name: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value === 'all') {
+      if (name === 'userId') {
+        params.set(name, value)
+      } else if (value === 'all') {
         params.delete(name)
       } else {
         params.set(name, value)

@@ -29,10 +29,8 @@ export function AIInsights({
 }: AIInsightsProps) {
   const insights = initialInsights
 
-  // Default active tab: "employee" for employees, "manager" for managers
-  const [activeTab, setActiveTab] = useState<'employee' | 'manager' | 'shared'>(
-    isManagerOrAdmin ? 'manager' : 'employee'
-  )
+  // Default active tab: "employee"
+  const [activeTab, setActiveTab] = useState<'employee' | 'manager' | 'shared'>('employee')
 
   // Format month to a readable string (e.g., "May 2026")
   const [year, monthStr] = month.split('-')
@@ -69,7 +67,7 @@ export function AIInsights({
               </div>
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-                  AI Productivity Insights
+                  Productivity Insights
                 </h2>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                   Analysis Period: {readableMonth}
@@ -81,8 +79,20 @@ export function AIInsights({
           {insights ? (
             <div className="space-y-6">
               {/* Tab Selector */}
-              <div className="flex p-1 bg-accent/30 border border-border/40 rounded-2xl w-fit max-w-full overflow-x-auto gap-1">
-                {isManagerOrAdmin && (
+              {isManagerOrAdmin && (
+                <div className="flex p-1 bg-accent/30 border border-border/40 rounded-2xl w-fit max-w-full overflow-x-auto gap-1">
+                  <button
+                    onClick={() => setActiveTab('employee')}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap",
+                      activeTab === 'employee'
+                        ? "bg-background text-foreground shadow-sm border border-border/30"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Employee View</span>
+                  </button>
                   <button
                     onClick={() => setActiveTab('manager')}
                     className={cn(
@@ -95,32 +105,20 @@ export function AIInsights({
                     <Shield className="w-3.5 h-3.5" />
                     <span>Manager View</span>
                   </button>
-                )}
-                <button
-                  onClick={() => setActiveTab('employee')}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap",
-                    activeTab === 'employee'
-                      ? "bg-background text-foreground shadow-sm border border-border/30"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Employee View</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('shared')}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap",
-                    activeTab === 'shared'
-                      ? "bg-background text-foreground shadow-sm border border-border/30"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Shared Summary</span>
-                </button>
-              </div>
+                  <button
+                    onClick={() => setActiveTab('shared')}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap",
+                      activeTab === 'shared'
+                        ? "bg-background text-foreground shadow-sm border border-border/30"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Shared Summary</span>
+                  </button>
+                </div>
+              )}
 
               {/* Tab Content Display */}
               <div className="bg-background/40 border border-border/40 rounded-3xl p-5 md:p-6 backdrop-blur-sm min-h-[120px] transition-all">

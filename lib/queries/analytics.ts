@@ -4,6 +4,7 @@ import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/types'
 
 interface AnalyticsFilter {
   userId?: string   // undefined = all users (manager/admin)
+  projectId?: string // filter by project ID
   days?: number     // default: 30
   startDate?: string // ISO date string (YYYY-MM-DD)
   endDate?: string   // ISO date string (YYYY-MM-DD)
@@ -25,6 +26,10 @@ export async function getDailyTrend(filter: AnalyticsFilter = {}): Promise<Daily
 
   if (filter.userId) {
     query = query.eq('user_id', filter.userId)
+  }
+
+  if (filter.projectId) {
+    query = query.eq('project_id', filter.projectId)
   }
 
   const { data, error } = await query
@@ -64,6 +69,10 @@ export async function getCategorySplit(filter: AnalyticsFilter = {}): Promise<Ca
     query = query.eq('user_id', filter.userId)
   }
 
+  if (filter.projectId) {
+    query = query.eq('project_id', filter.projectId)
+  }
+
   const { data, error } = await query
   if (error || !data) return []
 
@@ -94,6 +103,10 @@ export async function getProjectHours(filter: AnalyticsFilter = {}): Promise<Pro
 
   if (filter.userId) {
     query = query.eq('user_id', filter.userId)
+  }
+
+  if (filter.projectId) {
+    query = query.eq('project_id', filter.projectId)
   }
 
   const { data, error } = await query
@@ -129,6 +142,10 @@ export async function getAnalyticsSummary(filter: AnalyticsFilter = {}): Promise
 
   if (filter.userId) {
     query = query.eq('user_id', filter.userId)
+  }
+
+  if (filter.projectId) {
+    query = query.eq('project_id', filter.projectId)
   }
 
   if (filter.startDate) {

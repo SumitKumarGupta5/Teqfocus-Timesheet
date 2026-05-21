@@ -52,12 +52,16 @@ export default async function LogsPage({
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
-  // If manager/admin, fetch profiles for user selection
-  const profiles = isManagerOrAdmin ? await getAllProfiles() : []
+  // If manager/admin, fetch profiles for user selection and filter
+  // to only include the logged-in manager/admin and all employees
+  const rawProfiles = isManagerOrAdmin ? await getAllProfiles() : []
+  const profiles = rawProfiles.filter(
+    (p) => p.id === user.id || p.role === 'employee'
+  )
 
   // Determine target user ID to query logs & insights
   const selectedUserId = isManagerOrAdmin
-    ? (userId === 'all' || !userId ? undefined : userId)
+    ? (userId === 'all' ? undefined : (userId ?? user.id))
     : user.id
 
   const now = new Date()
@@ -100,6 +104,7 @@ export default async function LogsPage({
             projects={projects as Project[]}
             profiles={profiles}
             isManagerOrAdmin={isManagerOrAdmin}
+            currentUserId={user.id}
           />
           <LogDialog projects={projects as Project[]} />
         </div>
@@ -126,10 +131,10 @@ export default async function LogsPage({
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">
-                AI Performance Insights
+                Productivity Insights
               </h2>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Select a specific employee from the filter dropdown above to view or generate AI performance insights.
+                Select a specific employee from the filter dropdown above to view or generate productivity insights.
               </p>
             </div>
           </div>

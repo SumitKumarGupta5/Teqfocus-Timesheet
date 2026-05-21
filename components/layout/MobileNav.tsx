@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   ClipboardList,
@@ -37,6 +37,12 @@ interface MobileNavProps {
 export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  
+  const userId = searchParams.get('userId')
+  const month = searchParams.get('month')
+  const projectId = searchParams.get('projectId')
+
   const goal = profile?.weekly_goal ?? 40
   const progress = Math.min(Math.round((weeklyHours / goal) * 100), 100)
 
@@ -50,7 +56,7 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
       >
         <Menu className="w-5 h-5" />
       </button>
-
+ 
       {/* Backdrop */}
       {open && (
         <div
@@ -81,10 +87,21 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname.startsWith(item.href)
+            
+            // Construct URL preserving parameters
+            const params = new URLSearchParams()
+            if (item.href === '/logs' || item.href === '/analytics') {
+              if (userId) params.set('userId', userId)
+              if (month) params.set('month', month)
+              if (projectId) params.set('projectId', projectId)
+            }
+            const queryString = params.toString()
+            const href = queryString ? `${item.href}?${queryString}` : item.href
+
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={href}
                 onClick={() => setOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',

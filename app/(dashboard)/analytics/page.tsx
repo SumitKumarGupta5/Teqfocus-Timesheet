@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import { getDailyTrend, getCategorySplit, getProjectHours, getAnalyticsSummary } from '@/lib/queries/analytics'
+import { getProjects } from '@/lib/queries/logs'
+import { getAllProfiles } from '@/lib/queries/settings'
+import { LogFilters } from '@/components/logs/LogFilters'
 import { StatCard } from '@/components/analytics/StatCard'
 import { DailyTrendChart } from '@/components/analytics/DailyTrendChart'
 import { CategoryDonutChart } from '@/components/analytics/CategoryDonutChart'
@@ -8,12 +11,25 @@ import { ProjectBarChart } from '@/components/analytics/ProjectBarChart'
 import { Card } from '@/components/ui/card'
 import { Clock, Hash, TrendingUp, FolderDot } from 'lucide-react'
 import type { Metadata } from 'next'
+import type { Project } from '@/lib/types'
 
 export const metadata: Metadata = {
   title: 'Analytics',
 }
 
-export default async function AnalyticsPage() {
+function getMonthRange(monthStr: string) {
+  const [year, month] = monthStr.split('-').map(Number)
+  const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0]
+  const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+  return { startDate, endDate }
+}
+
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; projectId?: string; userId?: string }>
+}) {
+  const { month, projectId, userId } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -28,12 +44,33 @@ export default async function AnalyticsPage() {
     .single()
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
-  const baseFilter = isManagerOrAdmin ? {} : { userId: user.id }
 
-  // Calculate current month range
+  // Fetch projects and profiles for filtering
+  const [rawProjects, rawProfiles] = await Promise.all([
+    getProjects(),
+    isManagerOrAdmin ? getAllProfiles() : Promise.resolve([]),
+  ])
+
+  // Filter to show only the logged-in manager/admin and all employees
+  const filteredProfiles = rawProfiles.filter(
+    (p) => p.id === user.id || p.role === 'employee'
+  )
+
+  // Resolve selectedUserId based on role and selections
+  const selectedUserId = isManagerOrAdmin
+    ? (userId === 'all' ? undefined : (userId ?? user.id))
+    : user.id
+
+  const baseFilter = {
+    userId: selectedUserId,
+    projectId: projectId === 'all' ? undefined : projectId,
+  }
+
+  // Calculate month range based on parameters
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const currentMonth = month ?? defaultMonth
+  const { startDate: monthStart, endDate: monthEnd } = getMonthRange(currentMonth)
 
   const [summary, trend, categories, projects] = await Promise.all([
     getAnalyticsSummary({ ...baseFilter, startDate: monthStart, endDate: monthEnd }),
@@ -43,15 +80,25 @@ export default async function AnalyticsPage() {
   ])
 
   return (
-    <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8">
+    <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">
-          {isManagerOrAdmin ? 'Team Analytics' : 'My Analytics'}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Productivity insights and work trends
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isManagerOrAdmin ? 'Team Analytics' : 'My Analytics'}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Productivity insights and work trends
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <LogFilters
+            projects={rawProjects as Project[]}
+            profiles={filteredProfiles}
+            isManagerOrAdmin={isManagerOrAdmin}
+            currentUserId={user.id}
+          />
+        </div>
       </div>
 
       {/* Stat cards */}
