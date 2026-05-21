@@ -69,7 +69,7 @@ export function AIInsights({
               </div>
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-                  Grok AI Productivity Insights
+                  AI Productivity Insights
                 </h2>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                   Analysis Period: {readableMonth}

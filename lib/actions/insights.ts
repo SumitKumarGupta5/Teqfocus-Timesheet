@@ -79,11 +79,11 @@ export async function generateWorkLogInsightsCore(
     }
   })
 
-  const apiKey = process.env.XAI_API_KEY
-  const modelName = process.env.XAI_MODEL || 'grok-2-1212'
+  const apiKey = process.env.TRACKER_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY
+  const modelName = process.env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free'
 
   if (!apiKey) {
-    return { error: 'Grok API Key (XAI_API_KEY) is not configured.' }
+    return { error: 'OpenRouter API Key (TRACKER_OPENROUTER_API_KEY) is not configured.' }
   }
 
   const systemPrompt = `You are an expert HR coach, strategic project manager, and workplace mediator.
@@ -154,11 +154,13 @@ Ensure the response contains ONLY the raw JSON object. Do not wrap the JSON in m
   const userPrompt = `Here is the worklog data for the month of ${month}:\n${JSON.stringify(formattedLogs, null, 2)}`
 
   try {
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-Title': 'Employee Worklog Tracker',
       },
       body: JSON.stringify({
         model: modelName,
@@ -173,14 +175,14 @@ Ensure the response contains ONLY the raw JSON object. Do not wrap the JSON in m
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      return { error: `Grok API error: ${response.statusText}. ${JSON.stringify(errorData)}` }
+      return { error: `OpenRouter API error: ${response.statusText}. ${JSON.stringify(errorData)}` }
     }
 
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content?.trim()
 
     if (!content) {
-      return { error: 'Received empty response from Grok AI.' }
+      return { error: 'Received empty response from OpenRouter.' }
     }
 
     // Safely parse JSON from the response
@@ -196,7 +198,7 @@ Ensure the response contains ONLY the raw JSON object. Do not wrap the JSON in m
       parsedInsights = JSON.parse(jsonText)
     } catch (e) {
       const err = e as Error
-      return { error: `Failed to parse Grok JSON response: ${err.message}. Content was: ${content}` }
+      return { error: `Failed to parse OpenRouter JSON response: ${err.message}. Content was: ${content}` }
     }
 
     // Save/update insights in Database
@@ -226,6 +228,6 @@ Ensure the response contains ONLY the raw JSON object. Do not wrap the JSON in m
     return { success: true, insights: parsedInsights }
   } catch (err) {
     const error = err as Error
-    return { error: `Network error while calling Grok AI: ${error.message || String(err)}` }
+    return { error: `Network error while calling OpenRouter: ${error.message || String(err)}` }
   }
 }

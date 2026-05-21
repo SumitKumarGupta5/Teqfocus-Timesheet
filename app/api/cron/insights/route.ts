@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     return new NextResponse(
       JSON.stringify({
-        message: 'Monthly Grok AI insights generation completed.',
+        message: 'Monthly AI insights generation completed.',
         month: currentMonth,
         processedCount: profiles.length,
         results,
