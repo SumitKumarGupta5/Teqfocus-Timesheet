@@ -2,14 +2,32 @@
 
 export type UserRole = 'employee' | 'manager' | 'admin'
 
+export interface Department {
+  id: string
+  name: string
+  code: string
+  manager_id: string | null
+  color: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  // Joined
+  manager?: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
+}
+
 export interface Profile {
   id: string
   full_name: string | null
   avatar_url: string | null
   role: UserRole
   weekly_goal: number
+  department_id: string | null
+  is_active: boolean
+  requires_password_change: boolean
   created_at: string
   updated_at: string
+  // Joined
+  department?: Pick<Department, 'id' | 'name' | 'code' | 'color'> | null
 }
 
 // ─── Projects (company-wide) ──────────────────────────────────────────────────

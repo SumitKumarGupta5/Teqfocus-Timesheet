@@ -11,6 +11,8 @@ import {
   Menu,
   X,
   HelpCircle,
+  Users,
+  Building2,
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { TeqfocusLogo } from '@/components/layout/TeqfocusLogo'
@@ -26,7 +28,6 @@ const navItems: NavItem[] = [
   { href: '/logs', label: 'Work Logs', icon: ClipboardList },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/support', label: 'Support', icon: HelpCircle },
 ]
 
 interface MobileNavProps {
@@ -115,6 +116,49 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
               </Link>
             )
           })}
+
+          {profile?.role === 'admin' && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
+                Organisation
+              </div>
+              <Link
+                href="/organisation/users"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  pathname.startsWith('/organisation/users')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Users className="w-4 h-4 shrink-0" />
+                Users
+              </Link>
+              <Link
+                href="/organisation/departments"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  pathname.startsWith('/organisation/departments')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Building2 className="w-4 h-4 shrink-0" />
+                Department
+              </Link>
+            </>
+          )}
+
+          <Link
+            href="/support"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150 mt-auto"
+          >
+            <HelpCircle className="w-4 h-4 shrink-0" />
+            Support
+          </Link>
         </nav>
 
         <div className="mx-3 mb-3 p-4 rounded-xl bg-accent border border-border">

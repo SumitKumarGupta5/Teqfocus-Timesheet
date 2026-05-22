@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { ClipboardList, BarChart3, Settings, HelpCircle } from 'lucide-react'
+import { ClipboardList, BarChart3, Settings, HelpCircle, Users, Building2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import type { Profile } from '@/lib/types'
@@ -76,6 +76,39 @@ export function Sidebar({ profile, weeklyHours = 0 }: SidebarProps) {
             </Link>
           )
         })}
+
+        {profile?.role === 'admin' && (
+          <>
+            <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
+              Organisation
+            </div>
+            <Link
+              href="/organisation/users"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                pathname.startsWith('/organisation/users')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              Users
+            </Link>
+            <Link
+              href="/organisation/departments"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                pathname.startsWith('/organisation/departments')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Building2 className="w-4 h-4 shrink-0" />
+              Department
+            </Link>
+          </>
+        )}
+
         <Link
           href="/support"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-150 mt-auto"

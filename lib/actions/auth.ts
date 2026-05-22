@@ -9,13 +9,31 @@ export async function signIn(formData: FormData) {
   const password = formData.get('password') as string
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
     return redirect(`/auth/login?error=${encodeURIComponent(error.message)}`)
+  }
+
+  if (signInData?.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_active, requires_password_change')
+      .eq('id', signInData.user.id)
+      .single()
+
+    if (profile && !profile.is_active) {
+      revalidatePath('/', 'layout')
+      redirect('/inactive')
+    }
+
+    if (profile && profile.requires_password_change) {
+      revalidatePath('/', 'layout')
+      redirect('/auth/change-password')
+    }
   }
 
   revalidatePath('/', 'layout')
@@ -112,10 +130,21 @@ export async function updateUserPassword(formData: FormData) {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ password })
+  const { data: userData, error } = await supabase.auth.updateUser({ password })
 
   if (error) {
     return redirect(`/auth/reset-password?error=${encodeURIComponent(error.message)}`)
+  }
+
+  // If user successfully updated password via reset token, clear first-time change flag
+  if (userData?.user) {
+    await supabase
+      .from('profiles')
+      .update({
+        requires_password_change: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userData.user.id)
   }
 
   // Force sign out to clean up session and require logging in with the new password
@@ -123,5 +152,52 @@ export async function updateUserPassword(formData: FormData) {
 
   revalidatePath('/', 'layout')
   redirect('/auth/login?success=Password updated successfully. Please sign in.')
+}
+
+export async function updateFirstTimePassword(formData: FormData) {
+  const password = formData.get('password') as string
+  const confirmPassword = formData.get('confirmPassword') as string
+
+  if (!password || !confirmPassword) {
+    return redirect(`/auth/change-password?error=${encodeURIComponent('All fields are required.')}`)
+  }
+
+  if (password.length < 6) {
+    return redirect(`/auth/change-password?error=${encodeURIComponent('Password must be at least 6 characters.')}`)
+  }
+
+  if (password !== confirmPassword) {
+    return redirect(`/auth/change-password?error=${encodeURIComponent('Passwords do not match.')}`)
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return redirect('/auth/login')
+  }
+
+  const { error: authError } = await supabase.auth.updateUser({ password })
+
+  if (authError) {
+    return redirect(`/auth/change-password?error=${encodeURIComponent(authError.message)}`)
+  }
+
+  // Update profile status in database
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      requires_password_change: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id)
+
+  if (profileError) {
+    console.error('Error clearing requires_password_change flag:', profileError)
+    return redirect(`/auth/change-password?error=${encodeURIComponent('Failed to update user profile.')}`)
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/logs')
 }
 

@@ -32,6 +32,18 @@ export default async function DashboardLayout({
     getWeeklyHours(user.id),
   ])
 
+  if (!profile) {
+    redirect('/auth/login')
+  }
+
+  if (!profile.is_active) {
+    redirect('/inactive')
+  }
+
+  if (profile.requires_password_change) {
+    redirect('/auth/change-password')
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <Suspense fallback={<div className="h-16 border-b border-border bg-card shrink-0" />}>

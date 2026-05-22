@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
+import { getProfile } from '@/lib/queries/settings'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoginForm } from '@/components/auth/LoginForm'
@@ -24,7 +25,16 @@ export default async function LoginPage({ searchParams }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user) redirect('/logs')
+  if (user) {
+    const profile = await getProfile(user.id)
+    if (profile && !profile.is_active) {
+      redirect('/inactive')
+    }
+    if (profile && profile.requires_password_change) {
+      redirect('/auth/change-password')
+    }
+    redirect('/logs')
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/40 via-background to-background dark:from-indigo-950/20 dark:via-background dark:to-background p-4 relative overflow-hidden">
