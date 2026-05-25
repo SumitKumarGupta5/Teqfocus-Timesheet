@@ -1,4 +1,4 @@
-# ⏱️ Employee Worklog Tracker
+# ⏱️ Teqfocus Timesheet
 
 <p align="center">
   <img src="https://www.teqfocus.com/wp-content/uploads/2024/06/Teqfocus-Corrected-Logo156x70.png" alt="Teqfocus Logo" width="220" />
@@ -20,7 +20,7 @@
 
 ## 🌟 Core Features
 
-- **⏱️ Precise Time Tracking**: Log hours daily across 6 distinct project and support categories.
+- **⏱️ Precise Time Tracking**: Log hours daily across distinct project and support categories.
 - **📊 Interactive Analytics Dashboard**: Rich data visualizations showing daily trends and project distributions using **Recharts**.
 - **🔒 Secure Password Management**: Sign-in page includes a high-fidelity **Change Password** modal utilizing secure stateless credentials verification and auto-login redirection.
 - **🤝 Advanced Project Allocation**: Searchable dialog modals for managers to assign and remove employees from departments they oversee.
@@ -35,8 +35,8 @@ The platform enforces strict role-based access control (RBAC). Here is who can a
 
 | Feature / Action | 👑 Admin | 👥 Manager | 👤 Employee |
 | :--- | :---: | :---: | :---: |
-| **Log Work Hours** | ❌ | ❌ | ✅ |
-| **Personal Analytics** | ❌ | ❌ | ✅ |
+| **Log Work Hours** | ✅ | ✅ | ✅ |
+| **Personal Analytics** | ❌ | ✅ | ✅ |
 | **Manage Departments & Colors** | ✅ | ❌ | ❌ |
 | **Create Projects** | ✅ | ❌ | ❌ |
 | **View Team Directory & Status** | ✅ | ✅ | ❌ |
@@ -156,5 +156,5 @@ All tables in the schema (`profiles`, `work_logs`, `projects`, `departments`) ha
 ---
 
 <p align="center">
-  Teqfocus Timesheet Tracker &copy; 2026. Made for Teqfocus Consulting LLC.
+  Teqfocus &copy; 2026. Made for Teqfocus Consulting LLC.
 </p>
