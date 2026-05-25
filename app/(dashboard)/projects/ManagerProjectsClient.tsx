@@ -60,7 +60,7 @@ export function ManagerProjectsClient({
   const stats = useMemo(() => {
     const total = projects.length
     const totalMembers = projects.reduce((sum, p) => sum + (p.members?.length || 0), 0)
-    const avgTeamSize = total > 0 ? (totalMembers / total).toFixed(1) : '0'
+    const avgTeamSize = total > 0 ? Math.round(totalMembers / total).toString() : '0'
     return { total, totalMembers, avgTeamSize }
   }, [projects])
 
