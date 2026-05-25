@@ -1,549 +1,270 @@
 # Employee Worklog Tracker – Agent Guide
 
-## Quick Start
+## ⚡ Quick Start
 
 ```bash
-npm run dev       # Start development server on http://localhost:3000
-npm run build     # Production build
-npm run lint      # Run ESLint (no auto-fix)
+npm install              # Install dependencies
+npm run dev              # Start dev server → http://localhost:3000
+npm run build            # Production build
+npm run lint             # Check code quality
+npm run start            # Run production build
 ```
 
-## Project Overview
+## 📋 Project Overview
 
-**Employee Worklog Tracker** is a full-stack web application for tracking employee work hours and activities. Built with Next.js 16 (App Router), React 19, TypeScript, and Supabase backend.
+**Employee Worklog Tracker** is a full-stack work hours tracking application built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, and **Supabase PostgreSQL** backend.
 
-## Technology Stack
+**Core Features:**
+- Work log tracking (5 categories: on_project, shadow, bench, leave, training, other_project_support)
+- Analytics dashboard with daily trends and project breakdowns
+- Role-based access (employee, manager, admin) via Supabase RLS
+- Department and project management
+- Automated weekly insights via cron jobs
+- User-facing AI insights via OpenRouter API
 
-| Layer | Tech |
-|-------|------|
-| **Frontend** | React 19.2.4, TypeScript, Tailwind CSS 4 |
-| **UI Components** | shadcn/ui (radix-nova style), Radix UI primitives |
-| **Backend** | Supabase (PostgreSQL + Auth) |
-| **Build** | Next.js 16.2.6 (App Router) |
-| **Styling** | Tailwind CSS 4 + CSS Variables |
-| **Icons** | lucide-react |
-| **Linting** | ESLint 9 (Next.js core web vitals + TypeScript) |
+## 🛠️ Tech Stack
 
-## ⚠️ CRITICAL: Next.js 16 Breaking Changes
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19, TypeScript, Tailwind CSS 4, shadcn/ui |
+| **Backend** | Next.js 16.2.6 (App Router), Supabase (PostgreSQL + Auth) |
+| **Icons & Charts** | lucide-react, recharts |
+| **External APIs** | OpenRouter (AI insights), Supabase Edge Functions (cron) |
+| **Code Quality** | ESLint 9, TypeScript strict mode |
 
-**This is NOT the Next.js from your training data.** Next.js 16.2.6 has breaking changes in APIs and conventions. Before writing code:
-1. Check `node_modules/next/dist/docs/` for latest guides
-2. Review deprecation notices in error messages
-3. Verify API compatibility before using examples from older docs
+---
 
-## Code Conventions
+## 🏗️ Architecture Overview
 
-### Imports & Path Aliases
-```typescript
-// ✅ Use path aliases for clean imports
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-
-// ❌ Avoid relative paths for root-level imports
-import { cn } from "../../../lib/utils"
+### 3-Layer Design Pattern
+```
+Frontend (React Components)
+    ↓
+Data Layer (lib/queries/*.ts, lib/actions/*.ts)
+    ↓
+Supabase Backend (PostgreSQL + Auth)
 ```
 
-**Configured Aliases:**
-- `@/*` → root directory
-- `@/components` → `./components`
-- `@/components/ui` → `./components/ui`
-- `@/lib` → `./lib`
-- `@/utils` → `./lib/utils`
+### Core Principles
+- **Server-first**: Pages are server components by default
+- **Use client sparingly**: Only for interactivity (forms, dialogs, filters)
+- **Validate everywhere**: Server-side validation is mandatory
+- **Cache invalidation**: Always call `revalidatePath()` after mutations
+- **Type safety**: Strict TypeScript, no `any` types
 
-### Components
+---
 
-- **UI Components:** shadcn/ui in `components/ui/` (generated with shadcn CLI)
-- **Page/Feature Components:** In `app/` or feature directories
-- **Styling:** Tailwind CSS classes + `cn()` utility from `lib/utils.ts` for conditional styling
-
-```typescript
-// Example: Using shadcn component + cn() utility
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-
-export function MyComponent({ disabled }: { disabled?: boolean }) {
-  return (
-    <Button className={cn("transition-all", disabled && "opacity-50")}>
-      Click me
-    </Button>
-  )
-}
-```
-
-### Component Patterns
-
-- **Server Components:** Default in App Router. Use for data fetching and server logic
-- **Client Components:** Add `"use client"` only when needed (interactivity, hooks, browser APIs)
-- **Metadata:** Define in `layout.tsx` and `page.tsx` using `Metadata` type from `next`
-
-### Component Classification
-
-**Server Components** (fetch data, no `'use client'`):
-- `app/(dashboard)/logs/page.tsx` – fetches work logs, groups by date
-- `app/(dashboard)/analytics/page.tsx` – fetches analytics data
-- `app/(dashboard)/settings/page.tsx` – fetches user profile
-- `app/(dashboard)/layout.tsx` – fetches user auth state, weekly hours
-- `app/auth/login/page.tsx` – checks if already authenticated
-- `app/auth/signup/page.tsx` – checks if already authenticated
-- `components/logs/LogGroup.tsx` – renders log groups (receives data as props)
-- `components/analytics/StatCard.tsx`, `DailyTrendChart.tsx` – render charts
-
-**Client Components** (`'use client'`, interactive features):
-- `components/logs/LogForm.tsx` – form submission with `useTransition()`
-- `components/logs/LogDialog.tsx` – dialog state management
-- `components/logs/LogFilters.tsx` – filter state and interactions
-- `components/logs/LogCarousel.tsx` – carousel/swipe interactions
-- `components/layout/Sidebar.tsx` – navigation, `usePathname()`, route detection
-- `components/layout/Topbar.tsx` – user menu, sign out button
-- `components/settings/ProfileForm.tsx` – profile form with `useTransition()`
-- `components/settings/ProjectManager.tsx` – project CRUD with `useTransition()`
-- `components/settings/WeeklyGoalForm.tsx` – goal form with `useTransition()`
-
-### Supabase Integration
-
-- **Connection:** Use `@supabase/supabase-js` with SSR support from `@supabase/ssr`
-- **Authentication:** Supabase handles auth (check environment variables for credentials)
-- **Database:** PostgreSQL via Supabase – define schema migrations in migration files
-
-### Adding shadcn Components
-
-```bash
-npx shadcn-ui@latest add [component-name]
-# Example: npx shadcn-ui@latest add dialog
-```
-
-## Directory Structure
+## 📁 Directory Structure
 
 ```
-app/               # App Router pages and layouts
-├── layout.tsx     # Root layout with Geist fonts
-├── page.tsx       # Home page
-└── globals.css    # Global styles (Tailwind directives)
-components/        # React components
-├── ui/            # shadcn/ui components (generated)
-└── ...            # Feature components
+app/                      # Next.js App Router pages
+├── (dashboard)/          # Protected routes (require auth)
+│   ├── logs/            # Work log tracking
+│   ├── analytics/       # Analytics & insights
+│   ├── settings/        # User profile & projects
+│   └── organisation/    # Admin: departments, users, projects
+├── auth/                # Public: login, signup, password reset
+└── api/cron/insights/   # Scheduled jobs
+components/              # React components
+├── ui/                  # shadcn/ui components (generated)
+├── logs/                # LogForm, LogCard, LogFilters, etc.
+├── analytics/           # Charts and analytics components
+├── settings/            # Profile, project manager forms
+└── layout/              # Sidebar, Topbar, Navigation
 lib/
-├── utils.ts       # Utility functions (cn() for className merging)
-└── ...            # Shared logic
-public/            # Static assets (images, SVGs)
+├── actions/             # Server actions (mutations)
+├── queries/             # Server queries (read-only)
+├── admin.ts             # Admin-only utilities
+├── client.ts            # Browser Supabase client
+├── server.ts            # Server Supabase client
+├── middleware.ts        # Auth guard for protected routes
+└── types.ts             # TypeScript types
+supabase/                # Database migrations & schema
 ```
 
-## TypeScript
+## 🚀 Development Workflow
 
-- **Strict Mode:** Enabled (`"strict": true` in tsconfig.json)
-- **Target:** ES2017 for modern JavaScript support
-- **Module Resolution:** `bundler` for Next.js compatibility
+### Initial Setup
+1. `npm install` – Install all dependencies
+2. `.env.local` – Already configured with Supabase credentials
+3. Database schema – Run `supabase/migration.sql` if migrations are missing
+4. `npm run dev` – Start development server on `http://localhost:3000`
 
-## Development Workflow
-
-### Setup
-1. Install dependencies: `npm install`
-2. Configure `.env.local` with Supabase credentials:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_key
-   ```
-3. Load database schema: Run `migration.sql` in Supabase dashboard or via CLI
-4. **Middleware auto-detection**: Next.js automatically loads `middleware.ts` at the root. It runs on all requests and protects dashboard routes via the auth guard.
-
-### Running
-- **Development**: `npm run dev` → Opens `http://localhost:3000`
-  - Hot Module Reloading (HMR) enabled by default
-  - TypeScript errors appear in terminal
-- **Production Build**: `npm run build` → Creates `.next/` optimized bundle
-- **Production Run**: `npm run start` → Runs production build locally (after `npm run build`)
-
-### Linting & Quality
-- **Check Linting**: `npm run lint` (ESLint, no auto-fix)
-- **TypeScript Strict Mode**: Enabled globally; errors surface during development
-- **Before Committing**: Ensure `npm run lint` passes
+### Key Commands
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start dev server with HMR |
+| `npm run build` | Create optimized production bundle |
+| `npm run lint` | Check code quality (ESLint) |
+| `npm run start` | Run production build locally |
 
 ### Debugging
-- Open DevTools (`F12`) and check Console for client-side errors
-- Check terminal during `npm run dev` for server-side errors
-- Use `console.log()` in server actions to debug on terminal
-- Use React DevTools browser extension for component inspection
+- **Client errors**: Open DevTools (`F12`) → Console
+- **Server errors**: Check terminal during `npm run dev`
+- **Server actions**: Use `console.log()` in actions (logs appear in terminal)
+- **Component inspection**: Use React DevTools browser extension
 
-## Authentication & Middleware
+### Before Committing
+1. Run `npm run lint` – must pass
+2. Test locally with `npm run dev`
+3. Verify `revalidatePath()` called after mutations
+4. Check consistent error handling
 
-### Session Management (`middleware.ts`)
-The project uses Supabase SSR middleware to:
-- Refresh session cookies on every request
-- Protect routes by redirecting unauthenticated users to `/auth/login`
-- Maintain user claims and session state across requests
+---
 
-**⚠️ CRITICAL Pattern — Must Call `getClaims()`:**
-```typescript
-// lib/middleware.ts (simplified)
-export async function middleware(request: NextRequest) {
-  let supabase = createServerClient(...)
-  
-  // DO NOT remove this line — it refreshes session cookies
-  const { data: { user }, error } = await supabase.auth.getClaims()
-  
-  // Now check routes, refresh cookies, etc.
-  // ... route protection logic ...
-}
+## 🔐 Component & Data Patterns
+
+### Component Decision Tree
 ```
-**Why?** Without `getClaims()`, users may randomly log out (session expires). This call refreshes the session cookie on every request.
+Does it fetch data?
+├─ YES → Server Component (default)
+└─ NO → Does it need interactivity/hooks?
+    ├─ YES → Client Component ('use client')
+    └─ NO → Server Component
+```
 
-**Other Critical Patterns:**
-- Never put Supabase client in global variables (Fluid compute issue)
-- Create new client instance per request using `await createClient()` or `await createServerClient(...)`
-- In server actions: Always call `supabase.auth.getUser()` to verify identity before mutations
+### Server Components (Default)
+- Pages: `app/(dashboard)/logs/page.tsx`, `analytics/page.tsx`, `settings/page.tsx`
+- Non-interactive components: `LogGroup.tsx`, `DailyTrendChart.tsx`, `StatCard.tsx`
+- **Pattern**: Fetch data, pass as props to client components
 
-### Auth Flows (`lib/actions/auth.ts`)
-- **Sign In**: Form-based email/password authentication with error handling
-- **Sign Up**: Account creation with profile auto-creation via database trigger
-- **Sign Out**: Session termination and redirect to login
-- All auth actions redirect on completion and revalidate layout cache
+### Client Components ('use client')
+- Forms: `LogForm.tsx`, `ProfileForm.tsx`, `ProjectManager.tsx`
+- Dialogs & filters: `LogDialog.tsx`, `LogFilters.tsx`
+- Navigation: `Sidebar.tsx`, `Topbar.tsx`
+- **Pattern**: Use `useTransition()` for server action calls
 
-### Protected Routes
-- Dashboard routes (`/app/(dashboard)/*`) require authentication via middleware
-- Auth routes (`/auth/*`) are publicly accessible
-- Middleware automatically redirects unauthenticated users to login
+### Server Actions (Mutations)
+**Location**: `lib/actions/*.ts` – All marked with `'use server'`
 
-## Data Patterns
-
-### Server Actions (`lib/actions/`)
-All server mutations use `'use server'` directive with standardized patterns:
+Pattern:
 ```typescript
-// ✅ Correct pattern with error handling
 export async function createLog(input: CreateLogInput) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  
   if (!user) return { error: 'Not authenticated' }
   
-  // Validate on server
-  if (!input.hours || input.hours <= 0) return { error: 'Invalid hours' }
-  
-  const { error } = await supabase.from('work_logs').insert({...})
-  
+  // Validate, insert, revalidate cache
+  const { error } = await supabase.from('work_logs').insert(...)
   if (error) return { error: error.message }
   
-  // Always revalidate cache after mutations
   revalidatePath('/logs')
   revalidatePath('/analytics')
   return { success: true }
 }
 ```
 
-**Conventions:**
-- Each action handles one operation (create, update, delete)
-- Always authenticate and validate server-side
-- Return typed results: `{ success: boolean } | { error: string }`
-- Use `revalidatePath()` on all affected routes after mutations
-- Client components handle responses with toast notifications (via sonner)
+### Server Queries (Read-Only)
+**Location**: `lib/queries/*.ts` – No `'use server'` directive needed
 
-### Query Functions (`lib/queries/`)
-Server-only data fetching with typed results:
+Pattern:
 ```typescript
-// ✅ Correct pattern
 export async function getWorkLogs(filter: LogsFilter = {}): Promise<WorkLog[]> {
   const supabase = await createClient()
-  let query = supabase.from('work_logs').select('*, project(*), profile(*)')
+  let query = supabase.from('work_logs').select('*')
   
   if (filter.userId) query = query.eq('user_id', filter.userId)
-  if (filter.startDate) query = query.gte('date', filter.startDate)
-  
   const { data } = await query
   return data ?? []
 }
 ```
 
-**Conventions:**
-- No `'use server'` directive needed (queries are server-only by default)
-- Use filter objects for flexible querying
-- Join related tables in select clause
-- Always return typed data with fallback (e.g., `data ?? []`)
+### Authentication & Middleware
+- **Session**: Supabase SSR middleware refreshes cookies on every request
+- **Protected routes**: `/app/(dashboard)/*` redirects to `/auth/login` if not authenticated
+- **Auth flows**: `lib/actions/auth.ts` handles sign in, sign up, sign out
 
-### Database (`supabase/migration.sql`)
-PostgreSQL schema with:
-- **profiles**: User data with roles (employee/manager/admin) and weekly goals
-- **projects**: Company-wide projects with color tags
-- **work_logs**: Time entries with categories (on_project, shadow, bench, leave, training, other_project_support)
+---
 
-RLS (Row Level Security) policies:
-- Users can only view/edit their own logs unless manager/admin
-- Admins can manage projects and see all logs
+## 🚨 Critical Gotchas (Most Common Mistakes)
 
-## Environment Variables
+| ❌ Problem | ✅ Solution | 📍 Lines |
+|-----------|-----------|---------|
+| **Relative imports** (`../../../lib/utils`) | Use path aliases (`@/lib/utils`) | Any import |
+| **Forgot `revalidatePath()`** | Call it after all mutations | End of server action |
+| **`useSearchParams()` no Suspense** | Wrap with `<Suspense>` boundary | Client component |
+| **Server action without `useTransition()`** | Use `useTransition()` for loading state | Form submission |
+| **Global Supabase client** | Create fresh instance per request | `lib/client.ts`, `lib/server.ts` |
+| **Browser client in server action** | Use `await createClient()` (server) | Server actions only |
+| **Missing `getClaims()` in middleware** | Call it to refresh session cookies | `middleware.ts` |
 
-Ensure `.env.local` is set up with Supabase credentials:
-```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
-```
+---
 
-## Common Patterns by Task
+## 🗂️ Common Patterns by Task
 
-| Task | Pattern Location | Key Function | Example Use |
-|------|------------------|--------------|-------------|
-| **Create work log** | Server Action | `createLog()` in `lib/actions/logs.ts` | LogForm.tsx calls via `useTransition()` |
-| **Update work log** | Server Action | `updateLog()` in `lib/actions/logs.ts` | LogForm.tsx with edit mode |
-| **Delete work log** | Server Action | `deleteLog()` in `lib/actions/logs.ts` | LogCard.tsx delete button |
-| **Fetch user's logs** | Query Function | `getWorkLogs()` in `lib/queries/logs.ts` | `logs/page.tsx` server component |
-| **Fetch analytics data** | Query Function | `getDailyTrend()`, `getCategorySplit()` in `lib/queries/analytics.ts` | `analytics/page.tsx` |
-| **Create project** | Server Action | `createProject()` in `lib/actions/projects.ts` | ProjectManager.tsx |
-| **Update profile** | Server Action | `updateProfile()` in `lib/actions/settings.ts` | ProfileForm.tsx |
-| **Sign in user** | Server Action | `signIn()` in `lib/actions/auth.ts` | `auth/login/page.tsx` form |
-| **Sign up user** | Server Action | `signUp()` in `lib/actions/auth.ts` | `auth/signup/page.tsx` form |
-| **Sign out user** | Client + Browser API | `supabase.auth.signOut()` | Topbar.tsx logout button |
-| **Protect a route** | Middleware | Redirect via `middleware.ts` | All `/(dashboard)/*` routes |
-| **Show loading state** | Component | `loading.tsx` | `logs/loading.tsx`, `analytics/loading.tsx` |
-| **Filter logs by date range** | Query Function | `getWorkLogs(filter)` in `lib/queries/logs.ts` | `logs/page.tsx` with `LogsFilter` |
+| Task | Location | Function | Example |
+|------|----------|----------|---------|
+| **Create work log** | `lib/actions/logs.ts` | `createLog()` | LogForm.tsx calls via `useTransition()` |
+| **Update work log** | `lib/actions/logs.ts` | `updateLog()` | LogForm.tsx edit mode |
+| **Delete work log** | `lib/actions/logs.ts` | `deleteLog()` | LogCard.tsx delete button |
+| **Fetch user logs** | `lib/queries/logs.ts` | `getWorkLogs()` | `logs/page.tsx` server component |
+| **Fetch analytics** | `lib/queries/analytics.ts` | `getDailyTrend()` | `analytics/page.tsx` |
+| **Create project** | `lib/actions/projects.ts` | `createProject()` | ProjectManager.tsx |
+| **Manage departments** | `lib/actions/organisation.ts` | `createDepartment()` | Organisation admin page |
+| **Sign in user** | `lib/actions/auth.ts` | `signIn()` | `auth/login/page.tsx` |
+| **Sign up user** | `lib/actions/auth.ts` | `signUp()` | `auth/signup/page.tsx` |
 
-## Domain-Specific Patterns
+---
 
-### Work Categories & Filtering
-Work logs are categorized for analytics and reporting. Categories are defined in `lib/types.ts`:
-- **on_project**: Active client/billable work
-- **shadow**: Learning/mentoring with senior developers
-- **bench**: Idle time between projects
-- **leave**: Vacation, sick leave, holidays
-- **training**: Professional development, certifications
-- **other_project_support**: Internal support tasks
+## 📊 Database Schema Quick Reference
 
-**Pattern:** Use `LogFilters` with `category` field to filter logs. Example:
+**Work Log Categories**: `on_project`, `shadow`, `bench`, `leave`, `training`, `other_project_support`
+
+**Key Tables**:
+- `profiles` – User data, roles (employee/manager/admin), weekly goals
+- `projects` – Company projects with color tags
+- `departments` – Team organization
+- `work_logs` – Time entries with category and project
+- `insights` – Weekly summaries for users
+
+**RLS Policies**:
+- Employees: See only their own logs
+- Managers: See team logs
+- Admins: Full access + manage projects
+
+---
+
+## 🔗 Code Conventions
+
+### Imports
 ```typescript
-const logs = await getWorkLogs({
-  userId: user.id,
-  startDate: '2024-01-01',
-  category: 'on_project' // Optional filter
-})
-```
-
-### Date-Based Log Grouping (Dashboard Pattern)
-Logs page groups entries by date. Pattern:
-1. Fetch logs with `getWorkLogs()` (server component)
-2. Group by date in `LogGroup.tsx` (server component receives grouped data)
-3. Render daily cards with `DailyLogCard.tsx` (receives single day's logs as props)
-4. Dialog/form for editing uses `LogForm.tsx` (client component with `useTransition()`)
-
-### Role-Based Access Control
-Roles are: `employee`, `manager`, `admin` (stored in `profiles.role`).
-- **Employee**: Can only view/edit their own logs
-- **Manager**: Can view team logs and analytics
-- **Admin**: Can manage projects, see all logs, override permissions
-
-**Pattern:** Use middleware + query filtering:
-```typescript
-// In middleware: allow route if user exists (any role)
-// In queries: filter by user.id for employees, allow all for managers/admins
-export async function getWorkLogs(filter: LogsFilter = {}) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  // If employee, only their logs; if manager/admin, all logs
-  if (userRole === 'employee') {
-    query = query.eq('user_id', user.id)
-  }
-  // ... rest of query
-}
-```
-
-### Analytics Patterns
-Analytics queries in `lib/queries/analytics.ts` return typed summary objects:
-```typescript
-// Returns: AnalyticsSummary with total_hours, avg_hours_per_day, most_worked_project
-export async function getAnalyticsSummary(userId: string): Promise<AnalyticsSummary> {
-  // Query + aggregation logic
-}
-
-// Returns: Array of daily trend points for charting
-export async function getDailyTrend(userId: string, days = 30): Promise<DailyTrend[]> {
-  // Query last N days, group by date
-}
-```
-
-Components consume these: `DailyTrendChart.tsx`, `CategoryDonutChart.tsx`, `ProjectBarChart.tsx` render recharts visualizations.
-
-## Common Gotchas
-
-### 🔴 **Relative Imports for Root-Level Code**
-❌ **WRONG:**
-```typescript
-import { cn } from "../../../lib/utils"
-import { Button } from "../../../components/ui/button"
-```
-✅ **CORRECT:**
-```typescript
+// ✅ Always use path aliases
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-```
-**Why?** Next.js 16 uses path aliases. Relative imports for root-level modules will cause build failures.
 
-### 🔴 **Forgetting `revalidatePath()` After Mutations**
-❌ **WRONG:**
+// ❌ Never use relative paths for root-level
+import { cn } from "../../../lib/utils"
+```
+
+### Styling
 ```typescript
-export async function createLog(input: CreateLogInput) {
-  const supabase = await createClient()
-  await supabase.from('work_logs').insert({...})
-  // Forgot to revalidate!
-  return { success: true }
-}
+// Use cn() utility for conditional classes
+import { cn } from "@/lib/utils"
+
+<Button className={cn("transition-all", disabled && "opacity-50")} />
 ```
-✅ **CORRECT:**
-```typescript
-export async function createLog(input: CreateLogInput) {
-  const supabase = await createClient()
-  await supabase.from('work_logs').insert({...})
-  revalidatePath('/logs')      // Refresh cache
-  revalidatePath('/analytics') // Refresh related routes
-  return { success: true }
-}
+
+### Adding shadcn Components
+```bash
+npx shadcn-ui@latest add [component-name]
 ```
-**Why?** Next.js caches server component renders. Without revalidation, the UI won't update.
 
-### 🔴 **Using `useSearchParams()` Without Suspense**
-❌ **WRONG:**
-```typescript
-'use client'
-import { useSearchParams } from 'next/navigation'
+---
 
-export function FilterComponent() {
-  const searchParams = useSearchParams() // ⚠️ Will error
-  return <div>{searchParams.get('filter')}</div>
-}
-```
-✅ **CORRECT:**
-```typescript
-'use client'
-import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+## ✨ Before You Code
 
-function FilterComponentInner() {
-  const searchParams = useSearchParams()
-  return <div>{searchParams.get('filter')}</div>
-}
+1. **Check the Common Patterns table** above – find similar existing code
+2. **Decide**: Server component or client component?
+3. **Use hooks correctly**: `useTransition()` for server actions, `Suspense` for `useSearchParams()`
+4. **Always revalidate** after mutations with `revalidatePath()`
+5. **Follow existing patterns** – don't create new approaches
 
-export function FilterComponent() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <FilterComponentInner />
-    </Suspense>
-  )
-}
-```
-**Why?** `useSearchParams()` requires Suspense boundary in client components (Next.js 16 App Router).
+---
 
-### 🔴 **Calling Server Actions Without `useTransition()`**
-❌ **WRONG:**
-```typescript
-'use client'
-import { createLog } from '@/lib/actions/logs'
+## 📚 Quick Links
 
-export function LogForm() {
-  async function handleSubmit(formData: FormData) {
-    const result = await createLog({...}) // Can't show loading state
-  }
-  return <form onSubmit={handleSubmit}>...</form>
-}
-```
-✅ **CORRECT:**
-```typescript
-'use client'
-import { createLog } from '@/lib/actions/logs'
-import { useTransition } from 'react'
-
-export function LogForm() {
-  const [isPending, startTransition] = useTransition()
-  
-  function handleSubmit(formData: FormData) {
-    startTransition(async () => {
-      const result = await createLog({...})
-    })
-  }
-  
-  return (
-    <form onSubmit={handleSubmit}>
-      <button disabled={isPending}>
-        {isPending ? 'Saving...' : 'Save'}
-      </button>
-    </form>
-  )
-}
-```
-**Why?** `useTransition()` provides `isPending` state to disable buttons and show loading UI while the server action runs.
-
-### 🔴 **Putting Supabase Client in Global Variables**
-❌ **WRONG:**
-```typescript
-// lib/client.ts
-const supabase = createBrowserClient(...) // Global instance
-export { supabase }
-```
-✅ **CORRECT:**
-```typescript
-// lib/client.ts
-export function createClient() {
-  return createBrowserClient(...)
-}
-```
-**Why?** Supabase clients with Fluid Compute may share state across requests. Create fresh instances per use.
-
-### 🔴 **Using Browser Supabase Client in Server Actions**
-❌ **WRONG:**
-```typescript
-'use server'
-import { createClient } from '@/lib/client' // Browser client!
-
-export async function createLog(input: CreateLogInput) {
-  const supabase = createClient() // ❌ Won't work in server action
-  await supabase.from('work_logs').insert({...})
-}
-```
-✅ **CORRECT:**
-```typescript
-'use server'
-import { createClient } from '@/lib/server' // Server client
-
-export async function createLog(input: CreateLogInput) {
-  const supabase = await createClient() // ✅ Async server client
-  await supabase.from('work_logs').insert({...})
-}
-```
-**Why?** Browser clients use `localStorage` (not available on server). Server actions must use `await createClient()` or `createServerClient()`.
-
-## Quick Reference for Agents
-
-### Before Writing Code
-1. Check the **Common Patterns by Task** table above to find the right file/function
-2. Review the **Component Classification** to decide: Server Component or Client Component?
-3. If using `useSearchParams()`, wrap with Suspense (see Common Gotchas)
-4. If calling a server action, use `useTransition()` for loading state
-5. After mutations, call `revalidatePath()` for affected routes
-
-### External Resources
-1. [shadcn/ui docs](https://ui.shadcn.com/) – for UI component usage
-2. [Next.js 16 docs](https://nextjs.org/docs) – for App Router patterns
-3. [Supabase docs](https://supabase.com/docs) – for database and auth questions
-4. [Tailwind CSS docs](https://tailwindcss.com/) – for styling
-5. [Radix UI docs](https://www.radix-ui.com/) – for accessible primitives
-
-### Before Committing
-1. Run `npm run lint` and fix any issues
-2. Test the feature locally with `npm run dev`
-3. Verify `revalidatePath()` is called after mutations
-4. Check that error handling is consistent with existing patterns
-
-## AI Behavioral Rules
-
-- Never create duplicate files
-- Prefer reusable components
-- Keep architecture scalable
-- Use TypeScript strictly
-- Avoid using `any`
-- Prefer Server Components
-- Use shadcn/ui consistently
-- Keep business logic outside UI
-- Follow existing patterns before creating new ones
-
-## File Creation Rules
-
-Before creating files:
-1. Check existing structure
-2. Reuse components/utilities
-3. Avoid overengineering
-4. Keep folder hierarchy clean
+- **Existing Docs**: Check `CODEBASE_OVERVIEW.md` for detailed architecture
+- **Supabase**: [supabase.com/docs](https://supabase.com/docs)
+- **Next.js 16**: [nextjs.org/docs](https://nextjs.org/docs)
+- **shadcn/ui**: [ui.shadcn.com](https://ui.shadcn.com/)
+- **Tailwind CSS**: [tailwindcss.com](https://tailwindcss.com/)
