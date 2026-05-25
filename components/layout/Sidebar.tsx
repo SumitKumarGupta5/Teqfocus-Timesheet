@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { ClipboardList, BarChart3, Settings, HelpCircle, Users, Building2 } from 'lucide-react'
+import { ClipboardList, BarChart3, Settings, HelpCircle, Users, Building2, Briefcase } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import type { Profile } from '@/lib/types'
@@ -13,12 +13,6 @@ interface NavItem {
   label: string
   icon: React.ElementType
 }
-
-const navItems: NavItem[] = [
-  { href: '/logs', label: 'Work Logs', icon: ClipboardList },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/settings', label: 'Settings', icon: Settings },
-]
 
 interface SidebarProps {
   profile: Profile | null
@@ -42,11 +36,18 @@ export function Sidebar({ profile, weeklyHours = 0 }: SidebarProps) {
     employee: 'Employee',
   }
 
+  // Build nav items dynamically
+  const mainNavItems: NavItem[] = [
+    { href: '/logs', label: 'Work Logs', icon: ClipboardList },
+    { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ]
+
   return (
     <aside className="hidden lg:flex flex-col w-60 shrink-0 h-full bg-card border-r border-border">
       {/* Navigation */}
       <nav className="flex flex-col gap-1 px-3 pt-4 flex-1">
-        {navItems.map((item) => {
+        {mainNavItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname.startsWith(item.href)
           
@@ -77,6 +78,38 @@ export function Sidebar({ profile, weeklyHours = 0 }: SidebarProps) {
           )
         })}
 
+        {profile?.role === 'manager' && (
+          <>
+            <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
+              Organisation
+            </div>
+            <Link
+              href="/users"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                pathname.startsWith('/users')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              Users
+            </Link>
+            <Link
+              href="/projects"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                pathname.startsWith('/projects')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Briefcase className="w-4 h-4 shrink-0" />
+              Projects
+            </Link>
+          </>
+        )}
+
         {profile?.role === 'admin' && (
           <>
             <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
@@ -105,6 +138,18 @@ export function Sidebar({ profile, weeklyHours = 0 }: SidebarProps) {
             >
               <Building2 className="w-4 h-4 shrink-0" />
               Department
+            </Link>
+            <Link
+              href="/organisation/projects"
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                pathname.startsWith('/organisation/projects')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              <Briefcase className="w-4 h-4 shrink-0" />
+              Projects
             </Link>
           </>
         )}

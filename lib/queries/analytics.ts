@@ -3,7 +3,7 @@ import type { DailyTrend, CategorySplit, ProjectHours, AnalyticsSummary } from '
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/types'
 
 interface AnalyticsFilter {
-  userId?: string   // undefined = all users (manager/admin)
+  userId?: string | string[]   // support array for manager scope
   projectId?: string // filter by project ID
   days?: number     // default: 30
   startDate?: string // ISO date string (YYYY-MM-DD)
@@ -25,7 +25,11 @@ export async function getDailyTrend(filter: AnalyticsFilter = {}): Promise<Daily
     .lte('date', endDate.toISOString().split('T')[0])
 
   if (filter.userId) {
-    query = query.eq('user_id', filter.userId)
+    if (Array.isArray(filter.userId)) {
+      query = query.in('user_id', filter.userId)
+    } else {
+      query = query.eq('user_id', filter.userId)
+    }
   }
 
   if (filter.projectId) {
@@ -66,7 +70,11 @@ export async function getCategorySplit(filter: AnalyticsFilter = {}): Promise<Ca
     .gte('date', startDate.toISOString().split('T')[0])
 
   if (filter.userId) {
-    query = query.eq('user_id', filter.userId)
+    if (Array.isArray(filter.userId)) {
+      query = query.in('user_id', filter.userId)
+    } else {
+      query = query.eq('user_id', filter.userId)
+    }
   }
 
   if (filter.projectId) {
@@ -102,7 +110,11 @@ export async function getProjectHours(filter: AnalyticsFilter = {}): Promise<Pro
     .not('project_id', 'is', null)
 
   if (filter.userId) {
-    query = query.eq('user_id', filter.userId)
+    if (Array.isArray(filter.userId)) {
+      query = query.in('user_id', filter.userId)
+    } else {
+      query = query.eq('user_id', filter.userId)
+    }
   }
 
   if (filter.projectId) {
@@ -141,7 +153,11 @@ export async function getAnalyticsSummary(filter: AnalyticsFilter = {}): Promise
   let query = supabase.from('work_logs').select('hours, date, project:projects(name)')
 
   if (filter.userId) {
-    query = query.eq('user_id', filter.userId)
+    if (Array.isArray(filter.userId)) {
+      query = query.in('user_id', filter.userId)
+    } else {
+      query = query.eq('user_id', filter.userId)
+    }
   }
 
   if (filter.projectId) {

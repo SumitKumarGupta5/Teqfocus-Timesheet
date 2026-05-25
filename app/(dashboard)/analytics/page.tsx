@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import { getDailyTrend, getCategorySplit, getProjectHours, getAnalyticsSummary } from '@/lib/queries/analytics'
-import { getProjects } from '@/lib/queries/logs'
-import { getAllProfiles } from '@/lib/queries/settings'
+import { getProjectsForUser } from '@/lib/queries/logs'
+import { getAllProfiles, getProfilesForManager } from '@/lib/queries/settings'
 import { LogFilters } from '@/components/logs/LogFilters'
 import { StatCard } from '@/components/analytics/StatCard'
 import { DailyTrendChart } from '@/components/analytics/DailyTrendChart'
@@ -45,21 +45,40 @@ export default async function AnalyticsPage({
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
-  // Fetch projects and profiles for filtering
-  const [rawProjects, rawProfiles] = await Promise.all([
-    getProjects(),
-    isManagerOrAdmin ? getAllProfiles() : Promise.resolve([]),
+  // Fetch projects and profiles based on role permissions
+  const [rawProjects, filteredProfiles] = await Promise.all([
+    getProjectsForUser(user.id, profile?.role || 'employee'),
+    (async () => {
+      if (profile?.role === 'admin') {
+        const rawProfiles = await getAllProfiles()
+        return rawProfiles.filter(
+          (p) => p.id === user.id || p.role === 'employee'
+        )
+      } else if (profile?.role === 'manager') {
+        return getProfilesForManager(user.id)
+      }
+      return []
+    })()
   ])
 
-  // Filter to show only the logged-in manager/admin and all employees
-  const filteredProfiles = rawProfiles.filter(
-    (p) => p.id === user.id || p.role === 'employee'
-  )
+  // Resolve selectedUserId based on role and selections securely
+  let selectedUserId: string | string[] | undefined = user.id
 
-  // Resolve selectedUserId based on role and selections
-  const selectedUserId = isManagerOrAdmin
-    ? (userId === 'all' ? undefined : (userId ?? user.id))
-    : user.id
+  if (profile?.role === 'admin') {
+    if (userId === 'all') {
+      selectedUserId = undefined
+    } else if (userId) {
+      const isAllowed = filteredProfiles.some((p) => p.id === userId)
+      selectedUserId = isAllowed ? userId : user.id
+    }
+  } else if (profile?.role === 'manager') {
+    if (userId === 'all') {
+      selectedUserId = filteredProfiles.map((p) => p.id)
+    } else if (userId) {
+      const isAllowed = filteredProfiles.some((p) => p.id === userId)
+      selectedUserId = isAllowed ? userId : user.id
+    }
+  }
 
   const baseFilter = {
     userId: selectedUserId,

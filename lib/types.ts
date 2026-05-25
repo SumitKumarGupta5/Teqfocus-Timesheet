@@ -19,6 +19,7 @@ export interface Profile {
   id: string
   full_name: string | null
   avatar_url: string | null
+  email: string | null
   role: UserRole
   weekly_goal: number
   department_id: string | null
@@ -30,6 +31,11 @@ export interface Profile {
   department?: Pick<Department, 'id' | 'name' | 'code' | 'color'> | null
 }
 
+export interface TeamMemberDetails extends Profile {
+  projects: Array<{ id: string; name: string; color: string; department_id: string | null }>
+  weekly_hours: number
+}
+
 // ─── Projects (company-wide) ──────────────────────────────────────────────────
 
 export interface Project {
@@ -38,8 +44,14 @@ export interface Project {
   color: string
   is_active: boolean
   created_by: string | null
+  department_id: string | null
   created_at: string
   updated_at: string
+}
+
+export interface ProjectWithDetails extends Project {
+  department?: Pick<Department, 'id' | 'name' | 'code' | 'color'> | null
+  members?: Array<Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'role'>>
 }
 
 // ─── Work Logs ────────────────────────────────────────────────────────────────

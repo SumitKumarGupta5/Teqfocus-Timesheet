@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Users,
   Building2,
+  Briefcase,
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { TeqfocusLogo } from '@/components/layout/TeqfocusLogo'
@@ -23,12 +24,6 @@ interface NavItem {
   label: string
   icon: React.ElementType
 }
-
-const navItems: NavItem[] = [
-  { href: '/logs', label: 'Work Logs', icon: ClipboardList },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/settings', label: 'Settings', icon: Settings },
-]
 
 interface MobileNavProps {
   profile: Profile | null
@@ -46,6 +41,13 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
 
   const goal = profile?.weekly_goal ?? 40
   const progress = Math.min(Math.round((weeklyHours / goal) * 100), 100)
+
+  // Build nav items dynamically
+  const mainNavItems: NavItem[] = [
+    { href: '/logs', label: 'Work Logs', icon: ClipboardList },
+    { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ]
 
   return (
     <>
@@ -85,7 +87,7 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
         </div>
 
         <nav className="flex flex-col gap-1 px-3 pt-4 flex-1">
-          {navItems.map((item) => {
+          {mainNavItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname.startsWith(item.href)
             
@@ -117,6 +119,40 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
             )
           })}
 
+          {profile?.role === 'manager' && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
+                Organisation
+              </div>
+              <Link
+                href="/users"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  pathname.startsWith('/users')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Users className="w-4 h-4 shrink-0" />
+                Users
+              </Link>
+              <Link
+                href="/projects"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  pathname.startsWith('/projects')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Briefcase className="w-4 h-4 shrink-0" />
+                Projects
+              </Link>
+            </>
+          )}
+
           {profile?.role === 'admin' && (
             <>
               <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-4">
@@ -147,6 +183,19 @@ export function MobileNav({ profile, weeklyHours = 0 }: MobileNavProps) {
               >
                 <Building2 className="w-4 h-4 shrink-0" />
                 Department
+              </Link>
+              <Link
+                href="/organisation/projects"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  pathname.startsWith('/organisation/projects')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                )}
+              >
+                <Briefcase className="w-4 h-4 shrink-0" />
+                Projects
               </Link>
             </>
           )}

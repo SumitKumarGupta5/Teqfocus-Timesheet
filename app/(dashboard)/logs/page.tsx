@@ -1,15 +1,15 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
-import { getWorkLogs, getProjects } from '@/lib/queries/logs'
+import { getWorkLogs, getProjectsForUser } from '@/lib/queries/logs'
 import { getWorkLogInsight } from '@/lib/queries/insights'
-import { getAllProfiles } from '@/lib/queries/settings'
+import { getAllProfiles, getProfilesForManager } from '@/lib/queries/settings'
 import { LogDialog } from '@/components/logs/LogDialog'
 import { LogCarousel } from '@/components/logs/LogCarousel'
 import { LogFilters } from '@/components/logs/LogFilters'
 import { AIInsights } from '@/components/logs/AIInsights'
 import { ClipboardX, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
-import type { WorkLog, Project } from '@/lib/types'
+import type { WorkLog, Project, Profile } from '@/lib/types'
 
 export const metadata: Metadata = {
   title: 'Work Logs',
@@ -52,17 +52,36 @@ export default async function LogsPage({
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
-  // If manager/admin, fetch profiles for user selection and filter
-  // to only include the logged-in manager/admin and all employees
-  const rawProfiles = isManagerOrAdmin ? await getAllProfiles() : []
-  const profiles = rawProfiles.filter(
-    (p) => p.id === user.id || p.role === 'employee'
-  )
+  // Fetch profiles based on role permissions
+  let profiles: Profile[] = []
+  if (profile?.role === 'admin') {
+    const rawProfiles = await getAllProfiles()
+    profiles = rawProfiles.filter(
+      (p) => p.id === user.id || p.role === 'employee'
+    )
+  } else if (profile?.role === 'manager') {
+    profiles = await getProfilesForManager(user.id)
+  }
 
-  // Determine target user ID to query logs & insights
-  const selectedUserId = isManagerOrAdmin
-    ? (userId === 'all' ? undefined : (userId ?? user.id))
-    : user.id
+  // Determine target user ID to query logs & insights securely
+  let selectedUserId: string | string[] | undefined = user.id
+
+  if (profile?.role === 'admin') {
+    if (userId === 'all') {
+      selectedUserId = undefined // Admin sees all logs
+    } else if (userId) {
+      const isAllowed = profiles.some((p) => p.id === userId)
+      selectedUserId = isAllowed ? userId : user.id
+    }
+  } else if (profile?.role === 'manager') {
+    if (userId === 'all') {
+      // Manager sees only their allowed users' logs
+      selectedUserId = profiles.map((p) => p.id)
+    } else if (userId) {
+      const isAllowed = profiles.some((p) => p.id === userId)
+      selectedUserId = isAllowed ? userId : user.id
+    }
+  }
 
   const now = new Date()
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -76,11 +95,11 @@ export default async function LogsPage({
       endDate,
       projectId: projectId === 'all' ? undefined : projectId,
     }),
-    getProjects(),
+    getProjectsForUser(user.id, profile?.role || 'employee'),
   ])
 
   // Get cached insights if a single user is selected
-  const cachedInsight = selectedUserId
+  const cachedInsight = selectedUserId && typeof selectedUserId === 'string'
     ? await getWorkLogInsight(selectedUserId, currentMonth)
     : null
 
@@ -111,7 +130,7 @@ export default async function LogsPage({
       </div>
 
       {/* AI Productivity Insights */}
-      {selectedUserId ? (
+      {selectedUserId && typeof selectedUserId === 'string' ? (
         <AIInsights
           key={`${selectedUserId}-${currentMonth}`}
           initialInsights={cachedInsight}

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function signIn(formData: FormData) {
   const email = (formData.get('email') as string || '').trim().toLowerCase()
@@ -199,5 +200,155 @@ export async function updateFirstTimePassword(formData: FormData) {
 
   revalidatePath('/', 'layout')
   redirect('/logs')
+}
+
+export async function verifyChangePasswordCredentials(email: string, currentPassword: string) {
+  if (!email || !currentPassword) {
+    return { error: 'Email and current password are required.' }
+  }
+
+  const normalizedEmail = email.trim().toLowerCase()
+  
+  // Create a stateless client to verify credentials without setting cookies
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  )
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: currentPassword,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  if (data?.user) {
+    // Check if the user is active using the admin key to bypass RLS since we aren't using session cookies
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      }
+    )
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('is_active')
+      .eq('id', data.user.id)
+      .single()
+
+    if (profile && !profile.is_active) {
+      return { error: 'Account is inactive. Please contact administration.' }
+    }
+  }
+
+  return { success: true }
+}
+
+export async function updateVerifiedPasswordAndLogin(
+  email: string,
+  currentPassword: string,
+  password: string,
+  confirmPassword: string
+) {
+  if (!email || !currentPassword || !password || !confirmPassword) {
+    return { error: 'All fields are required.' }
+  }
+
+  if (password.length < 6) {
+    return { error: 'Password must be at least 6 characters.' }
+  }
+
+  if (password !== confirmPassword) {
+    return { error: 'Passwords do not match.' }
+  }
+
+  const normalizedEmail = email.trim().toLowerCase()
+
+  // 1. Stateless verification of old credentials
+  const supabaseStateless = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  )
+
+  const { data: verifyData, error: verifyError } = await supabaseStateless.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: currentPassword,
+  })
+
+  if (verifyError || !verifyData?.user) {
+    return { error: 'Verification failed: Current credentials are invalid.' }
+  }
+
+  const userId = verifyData.user.id
+
+  // 2. Admin client to update user password
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  )
+
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    password: password
+  })
+
+  if (authError) {
+    return { error: authError.message }
+  }
+
+  // Update profile status in database to clear requirements if present
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      requires_password_change: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  if (profileError) {
+    console.error('Error clearing requires_password_change flag on profile:', profileError)
+  }
+
+  // 3. Cookie-based login with the NEW password to establish session in browser
+  const supabaseSSR = await createClient()
+  const { error: loginError } = await supabaseSSR.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: password,
+  })
+
+  if (loginError) {
+    return { error: `Password updated, but failed to log in automatically: ${loginError.message}` }
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
 }
 
